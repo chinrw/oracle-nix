@@ -1,0 +1,8 @@
+{
+  "name": "oracle-nix",
+  "version": "0.23.0",
+  "private": true,
+  "dependencies": {
+    "@steipete/oracle": "0.23.0"
+  }
+}
