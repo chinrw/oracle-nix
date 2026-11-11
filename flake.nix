@@ -42,10 +42,22 @@
         }:
         let
           cfg = config.programs.oracle;
+          package =
+            if cfg.apiKeyFile == null then
+              cfg.package
+            else
+              cfg.package.override {
+                apiKeyFile = cfg.apiKeyFile;
+              };
         in
         {
           options.programs.oracle = {
             enable = lib.mkEnableOption "Oracle CLI and MCP server";
+            apiKeyFile = lib.mkOption {
+              type = lib.types.nullOr (lib.types.strMatching "/.*");
+              default = null;
+              description = "Absolute runtime path to an OpenAI API key; explicit OPENAI_API_KEY takes precedence. The file is not read during evaluation or build.";
+            };
             package = lib.mkOption {
               type = lib.types.package;
               default = pkgs.callPackage ./package { };
@@ -53,7 +65,7 @@
             };
           };
           config = lib.mkIf cfg.enable {
-            home.packages = [ cfg.package ];
+            home.packages = [ package ];
           };
         };
       checks = eachSystem (
@@ -63,6 +75,32 @@
         in
         {
           oracle = self.packages.${system}.oracle;
+          api-key-file =
+            let
+              wrapped = self.packages.${system}.oracle.override {
+                apiKeyFile = "/tmp/oracle-nix-keyfile-check";
+              };
+            in
+            assert
+              !(builtins.tryEval (
+                (self.packages.${system}.oracle.override {
+                  apiKeyFile = "relative-key";
+                }).drvPath
+              )).success;
+            assert
+              !(builtins.tryEval (
+                (self.packages.${system}.oracle.override {
+                  apiKeyFile = "/nix/store/not-a-runtime-secret";
+                }).drvPath
+              )).success;
+            pkgs.runCommand "oracle-api-key-file-check"
+              {
+                nativeBuildInputs = [ pkgs.python3 ];
+              }
+              ''
+                python3 ${./tests/keyfile.py} ${wrapped}
+                touch "$out"
+              '';
           updater =
             pkgs.runCommand "oracle-updater-tests"
               {

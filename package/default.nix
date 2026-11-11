@@ -4,10 +4,26 @@
   nodejs_24,
   makeWrapper,
   python3,
+  coreutils,
+  apiKeyFile ? null,
 }:
 let
   manifest = builtins.fromJSON (builtins.readFile ./package.json);
+  keyLoader = lib.optionalString (apiKeyFile != null) ''
+    if [ -z "''${OPENAI_API_KEY-}" ] && [ -r ${lib.escapeShellArg apiKeyFile} ]; then
+      OPENAI_API_KEY="$(${coreutils}/bin/cat ${lib.escapeShellArg apiKeyFile})"
+      export OPENAI_API_KEY
+    fi
+  '';
 in
+assert lib.assertMsg (
+  apiKeyFile == null
+  || (
+    builtins.isString apiKeyFile
+    && lib.hasPrefix "/" apiKeyFile
+    && !(lib.hasPrefix "${builtins.storeDir}/" apiKeyFile)
+  )
+) "apiKeyFile must be an absolute runtime path string outside the Nix store";
 buildNpmPackage {
   pname = "oracle";
   inherit (manifest) version;
@@ -34,7 +50,9 @@ buildNpmPackage {
       fi
       makeWrapper ${nodejs_24}/bin/node "$out/bin/$command" \
         --add-flags "$out/lib/oracle/node_modules/@steipete/oracle/dist/bin/$entry.js" \
-        --set-default ORACLE_ENGINE api
+        --set-default ORACLE_ENGINE api ${
+          lib.optionalString (apiKeyFile != null) "--run ${lib.escapeShellArg keyLoader}"
+        }
     done
     runHook postInstall
   '';

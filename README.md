@@ -1,6 +1,6 @@
 # oracle-nix
 
-Install the Oracle CLI and MCP server with Nix, using a locked npm release and dependency hash. The package provides `oracle` and `oracle-mcp` and defaults to the API engine. It does not install skills, register MCP clients, store credentials or start a service.
+Install the Oracle CLI and MCP server with Nix, using a locked npm release and dependency hash. The package provides `oracle` and `oracle-mcp` and defaults to the API engine. It does not install skills, register MCP clients, decrypt secrets or start a service.
 
 ## Build and run
 
@@ -36,6 +36,30 @@ Import the module into the selected Home Manager configuration:
   programs.oracle.enable = true;
 }
 ```
+
+### Runtime API key files and sops-nix
+
+The module accepts a runtime file path. sops-nix owns decryption and file permissions; Oracle reads the resulting file when it starts:
+
+```nix
+{ config, ... }:
+{
+  sops.secrets.openai-api-key = {
+    sopsFile = ./secrets/openai.yaml;
+    key = "api_key";
+  };
+  programs.oracle = {
+    enable = true;
+    apiKeyFile = config.sops.secrets.openai-api-key.path;
+  };
+}
+```
+
+Import and configure sops-nix in the consuming Home Manager configuration. This flake does not need a sops input and does not take ownership of age keys or encryption recipients. Other secret managers can supply the same runtime path.
+
+`apiKeyFile` defaults to null and must be an absolute string outside the Nix store, not a Nix path literal or a `builtins.readFile` result. Only the path enters the store; the file is read by the `oracle` and `oracle-mcp` launchers. A nonempty caller-exported `OPENAI_API_KEY` wins. If the optional file is missing or unreadable, Oracle retains its usual credential handling, so help and browser-only use remain available. Once the launcher has loaded the host key into the environment, an unexported cwd `.env` cannot override it.
+
+Package consumers can also use `oracle.override { apiKeyFile = "/run/secrets/openai-api-key"; }`. A custom `programs.oracle.package` must support this override when `apiKeyFile` is set.
 
 The module builds against the consumer's `pkgs`. `programs.oracle.package` can override that package. For consumers that prefer an overlay, `overlays.default` exposes `pkgs.oracle`; direct flake consumers can use `packages.<system>.oracle` or `.default`.
 
