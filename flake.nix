@@ -18,6 +18,7 @@
       packages = eachSystem (system: {
         default = self.packages.${system}.oracle;
         oracle = packageFor system;
+        oracle-advisor = nixpkgs.legacyPackages.${system}.callPackage ./skills { };
       });
       apps = eachSystem (system: {
         default = self.apps.${system}.oracle;
@@ -53,6 +54,7 @@
         {
           options.programs.oracle = {
             enable = lib.mkEnableOption "Oracle CLI and MCP server";
+            skills.enable = lib.mkEnableOption "the upstream oracle-advisor skill for Codex, pi and Claude Code";
             apiKeyFile = lib.mkOption {
               type = lib.types.nullOr (lib.types.strMatching "/.*");
               default = null;
@@ -66,6 +68,12 @@
           };
           config = lib.mkIf cfg.enable {
             home.packages = [ package ];
+            home.file = lib.mkIf cfg.skills.enable {
+              ".agents/skills/oracle-advisor".source =
+                self.packages.${pkgs.stdenv.hostPlatform.system}.oracle-advisor;
+              ".claude/skills/oracle-advisor".source =
+                self.packages.${pkgs.stdenv.hostPlatform.system}.oracle-advisor;
+            };
           };
         };
       checks = eachSystem (
@@ -75,6 +83,11 @@
         in
         {
           oracle = self.packages.${system}.oracle;
+          skills = import ./tests/skills.nix {
+            inherit pkgs;
+            module = self.homeManagerModules.default;
+            skill = self.packages.${system}.oracle-advisor;
+          };
           api-key-file =
             let
               wrapped = self.packages.${system}.oracle.override {

@@ -50,7 +50,7 @@ jobs:
             access-tokens = github.com=${{ secrets.GITHUB_TOKEN }}
       - name: Check formatting and workflow syntax
         run: |
-          nix develop -c nixfmt --check flake.nix package/default.nix
+          nix develop -c nixfmt --check flake.nix package/default.nix skills/default.nix tests/skills.nix
           nix develop -c actionlint
       - name: Build and run offline checks
         run: nix flake check --system '${{ matrix.system }}' --print-build-logs

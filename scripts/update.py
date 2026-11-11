@@ -55,8 +55,14 @@ def update(root, target=None, check=False, refresh=False):
         deps_hash = command(['prefetch-npm-deps',str(candidate/'package-lock.json')])
         if not re.fullmatch(r'sha256-[A-Za-z0-9+/]{43}=', deps_hash):
             raise ValueError('prefetch-npm-deps returned an invalid hash')
-        # Do not replace repository files until both resolution and hashing succeeded.
-        for name, content in [('package.json',manifest_text),('package-lock.json',lock_text),('npm-deps-hash',deps_hash+'\n')]:
+        source_url = f"https://github.com/steipete/oracle/archive/refs/tags/v{version}.tar.gz"
+        archive_hash = command(['nix-prefetch-url', '--unpack', source_url])
+        source_hash = command(['nix', 'hash', 'convert', '--hash-algo', 'sha256', '--to', 'sri', archive_hash])
+        if not re.fullmatch(r'sha256-[A-Za-z0-9+/]{43}=', source_hash):
+            raise ValueError('Upstream skill source hash is invalid')
+        source_text = json.dumps({'version': version, 'url': source_url, 'hash': source_hash}, indent=2) + '\n'
+        # Publish files only after npm and the matching upstream source are pinned.
+        for name, content in [('package.json',manifest_text),('package-lock.json',lock_text),('npm-deps-hash',deps_hash+'\n'),('skill-source.json',source_text)]:
             destination = directory / name
             if destination.read_text() != content:
                 result['changed'] = True

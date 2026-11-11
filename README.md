@@ -1,6 +1,6 @@
 # oracle-nix
 
-Install the Oracle CLI and MCP server with Nix, using a locked npm release and dependency hash. The package provides `oracle` and `oracle-mcp` and defaults to the API engine. It does not install skills, register MCP clients, decrypt secrets or start a service.
+Install the Oracle CLI and MCP server with Nix, using a locked npm release and dependency hash. The package provides `oracle` and `oracle-mcp` and defaults to the API engine. Its Home Manager module can also install the upstream oracle-advisor skill. It does not register MCP clients, decrypt secrets or start a service.
 
 ## Build and run
 
@@ -36,6 +36,23 @@ Import the module into the selected Home Manager configuration:
   programs.oracle.enable = true;
 }
 ```
+
+### Agent skills
+
+Enable the upstream skill alongside the CLI:
+
+```nix
+programs.oracle = {
+  enable = true;
+  skills.enable = true;
+};
+```
+
+`skills.enable` defaults to false. When enabled, Home Manager links the same read-only `oracle-advisor` directory into `~/.agents/skills` (discovered by Codex and pi) and `~/.claude/skills` (Claude Code). It does not create duplicate Codex or pi native entries. Existing unmanaged files are protected by Home Manager's normal collision checks.
+
+The skill is copied unchanged from the matching Oracle release tag. `package/skill-source.json` pins its archive URL and content hash; the updater refreshes it together with the CLI version. A missing upstream release tag or missing skill makes validation fail instead of publishing an incomplete update. The source's license is included. Updating the downstream flake and activating Home Manager updates both entrypoints; disabling the option removes the managed links.
+
+The skill guides use of the installed `oracle` CLI. It neither runs a consultation during installation nor registers an MCP server. Refresh the agent's skill discovery or open a new session after activation.
 
 ### Runtime API key files and sops-nix
 

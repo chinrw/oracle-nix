@@ -24,6 +24,7 @@ class UpdateTests(unittest.TestCase):
         (self.package/'package.json').write_text(json.dumps(manifest))
         (self.package/'package-lock.json').write_text(json.dumps(lock))
         (self.package/'npm-deps-hash').write_text('sha256-'+'A'*43+'=\n')
+        (self.package/'skill-source.json').write_text(json.dumps({'version':'0.23.0','url':'https://example.invalid/fixture','hash':'sha256-'+'A'*43+'='}))
         self.before=self.snapshot()
 
     def snapshot(self):
@@ -78,6 +79,19 @@ class UpdateTests(unittest.TestCase):
         self.assertEqual(manifest['dependencies']['@steipete/oracle'],'0.24.0')
         self.assertEqual(lock['packages']['node_modules/@steipete/oracle']['version'],'0.24.0')
         self.assertEqual((self.package/'npm-deps-hash').read_text(),'sha256-'+'B'*43+'=\n')
+        source=json.loads((self.package/'skill-source.json').read_text())
+        self.assertEqual(source['version'],'0.24.0')
+        self.assertEqual(source['url'],'https://github.com/steipete/oracle/archive/refs/tags/v0.24.0.tar.gz')
+
+    def test_missing_upstream_tag_preserves_package_files(self):
+        def fail(args, cwd=None):
+            if args[0] == 'nix-prefetch-url':
+                raise subprocess.CalledProcessError(1, args)
+            return self.resolve(args, cwd)
+        with patch.object(update, 'command', side_effect=fail):
+            with self.assertRaises(subprocess.CalledProcessError):
+                update.update(self.root, target='0.24.0')
+        self.assertEqual(self.snapshot(), self.before)
 
     def test_invalid_release_rejected_before_resolution(self):
         for version in ('latest','0.24.0-beta.1','0.24.0; echo nope'):
