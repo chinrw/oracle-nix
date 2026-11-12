@@ -1,0 +1,59 @@
+--- a/skills/oracle-advisor/SKILL.md
++++ b/skills/oracle-advisor/SKILL.md
+@@ -17,7 +17,7 @@
+ persists; do not ask again when a permitted route is already clear.
+ 
+ - **API:** use an explicitly configured and authorized provider. Pass
+-  `--engine api` and the requested model; preserve required reasoning settings.
++  `--engine api`; use the model/default rules below and preserve required reasoning settings.
+ - **Browser:** use the authorized signed-in browser route. Pass
+   `--engine browser`; confirm the requested model and effort through Oracle's
+   selection evidence. Browser availability alone does not authorize a fallback.
+@@ -31,6 +31,25 @@
+ has already allowed it. Otherwise explain the missing capability and ask for
+ the transport choice. Never silently reduce the required model or effort.
+ 
++## Resolve the model and reasoning defaults
++
++When the caller specifies a model or reasoning setting, pass that choice explicitly.
++Otherwise, omit `--model`, `--models`, `--reasoning-mode`, `--reasoning-effort`, and
++`--browser-thinking-time` so Oracle resolves the configured defaults. For MCP,
++omit the corresponding optional fields. Examples below inherit configuration;
++they do not recommend a particular model.
++
++Inspect the exact invocation with `--dry-run full` from the intended working
++directory. Confirm the resolved model before submitting, since project settings
++can override the user model. To inspect user defaults, read only the model,
++reasoning and browser-selection fields in `${ORACLE_HOME_DIR:-$HOME/.oracle}/config.json`;
++keep credentials and unrelated configuration out of logs. Inherit API reasoning
++from `reasoningMode`/`reasoningEffort`, and browser selection from
++`browser.thinkingTime`/`browser.modelStrategy`. If the caller requested configured
++defaults but the preview conflicts with them, resolve that conflict before sending.
++Use established configuration and authorization without asking the caller to
++select the same model again. Ask when a required choice remains unresolved.
++
+ ## Run the consultation
+ 
+ Inspect `oracle --help --verbose` for the installed version. For an execution
+@@ -43,18 +62,17 @@
+ Examples using an installed Oracle:
+ 
+ ```bash
+-oracle --engine api --model gpt-5.4 --wait \
++oracle --engine api --wait \
+   --prompt "Review this package metadata for compatibility risks." --file package.json
+ 
+-oracle --engine browser --model gpt-5.6-sol --browser-thinking-time pro \
++oracle --engine browser \
+   --prompt "Review this package metadata for compatibility risks." --file package.json
+ 
+ oracle --render \
+   --prompt "Review this package metadata for compatibility risks." --file package.json
+ ```
+ 
+-MCP callers can use `consult` with explicit `engine`, `model`, and browser
+-controls, and inspect `sessions` with `detail:true`. If a call detaches or times
++MCP callers can use `consult` with explicit `engine` and caller-requested overrides, and inspect `sessions` with `detail:true`. If a call detaches or times
+ out, inspect its existing session before retrying; do not create a duplicate
+ consultation. Use `--followup <session-id>` only when continuing that conversation
+ is intended. Preserve a browser conversation with the existing explicit

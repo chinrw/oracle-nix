@@ -14,6 +14,7 @@ stdenvNoCC.mkDerivation {
   pname = "oracle-advisor";
   inherit (manifest) version;
   src = fetchzip { inherit (source) url hash; };
+  patches = [ ./configured-defaults.patch ];
   dontBuild = true;
   installPhase = ''
     runHook preInstall
