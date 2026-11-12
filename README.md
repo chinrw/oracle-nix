@@ -39,6 +39,22 @@ Import the module into the selected Home Manager configuration:
 }
 ```
 
+### Default model and reasoning
+
+Declare the user configuration through Home Manager:
+
+```nix
+programs.oracle.settings = {
+  model = "gpt-6-astra";
+  reasoningMode = "pro";
+  reasoningEffort = "high";
+};
+```
+
+Nonempty settings manage `~/.oracle/config.json`. Preserve existing browser settings in this attribute set and back up an unmanaged configuration before activation. Never put API keys in settings; use `apiKeyFile` instead.
+
+The package carries a small patch for Oracle 0.23.0 to read `reasoningMode` and `reasoningEffort` from user configuration. These defaults apply to CLI and MCP API runs, not browser runs. Explicit CLI reasoning flags override them. MCP currently has no per-call reasoning fields; its calls use the configured defaults. When choosing a different API model, choose reasoning settings that it supports. Project configuration cannot override these user-owned reasoning defaults.
+
 ### Agent skills
 
 Enable the upstream skill alongside the CLI:

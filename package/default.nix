@@ -43,6 +43,8 @@ buildNpmPackage {
     runHook preInstall
     mkdir -p "$out/lib/oracle" "$out/bin"
     cp -r node_modules "$out/lib/oracle/"
+    chmod -R u+w "$out/lib/oracle/node_modules/@steipete/oracle"
+    patch -d "$out/lib/oracle/node_modules/@steipete/oracle" -p1 < ${./reasoning-defaults.patch}
     for command in oracle oracle-mcp; do
       entry="$command"
       if [ "$command" = oracle ]; then
@@ -63,6 +65,7 @@ buildNpmPackage {
   installCheckPhase = ''
     runHook preInstallCheck
     python3 ${../tests/smoke.py} "$out" '${manifest.version}'
+    python3 ${../tests/defaults.py} "$out"
     runHook postInstallCheck
   '';
 

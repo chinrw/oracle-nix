@@ -54,6 +54,11 @@
         {
           options.programs.oracle = {
             enable = lib.mkEnableOption "Oracle CLI and MCP server";
+            settings = lib.mkOption {
+              type = (pkgs.formats.json { }).type;
+              default = { };
+              description = "Oracle user configuration. Nonempty settings manage ~/.oracle/config.json; do not include credentials. reasoningMode and reasoningEffort are API defaults, overridden by explicit CLI flags.";
+            };
             skills.enable = lib.mkEnableOption "the upstream oracle-advisor skill for Codex, pi and Claude Code";
             apiKeyFile = lib.mkOption {
               type = lib.types.nullOr (lib.types.strMatching "/.*");
@@ -68,12 +73,17 @@
           };
           config = lib.mkIf cfg.enable {
             home.packages = [ package ];
-            home.file = lib.mkIf cfg.skills.enable {
-              ".agents/skills/oracle-advisor".source =
-                self.packages.${pkgs.stdenv.hostPlatform.system}.oracle-advisor;
-              ".claude/skills/oracle-advisor".source =
-                self.packages.${pkgs.stdenv.hostPlatform.system}.oracle-advisor;
-            };
+            home.file = lib.mkMerge [
+              (lib.mkIf (cfg.settings != { }) {
+                ".oracle/config.json".source = (pkgs.formats.json { }).generate "oracle-config.json" cfg.settings;
+              })
+              (lib.mkIf cfg.skills.enable {
+                ".agents/skills/oracle-advisor".source =
+                  self.packages.${pkgs.stdenv.hostPlatform.system}.oracle-advisor;
+                ".claude/skills/oracle-advisor".source =
+                  self.packages.${pkgs.stdenv.hostPlatform.system}.oracle-advisor;
+              })
+            ];
           };
         };
       checks = eachSystem (

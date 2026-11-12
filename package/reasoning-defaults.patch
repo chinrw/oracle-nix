@@ -1,0 +1,24 @@
+--- a/dist/bin/oracle-cli.js
++++ b/dist/bin/oracle-cli.js
+@@ -1241,6 +1241,10 @@
+     const resolvedBaseUrl = normalizeBaseUrl(options.baseUrl ?? (isClaude ? process.env.ANTHROPIC_BASE_URL : process.env.OPENAI_BASE_URL));
+     const { models: _rawModels, ...optionsWithoutModels } = options;
+     const resolvedOptions = { ...optionsWithoutModels, model: resolvedModel };
++    if (engine === "api") {
++        resolvedOptions.reasoningMode ??= userConfig.reasoningMode;
++        resolvedOptions.reasoningEffort ??= userConfig.reasoningEffort;
++    }
+     resolvedOptions.maxFileSizeBytes =
+         options.maxFileSizeBytes ?? resolveConfiguredMaxFileSizeBytes(userConfig, process.env);
+     if (normalizedMultiModels.length > 0) {
+--- a/dist/src/cli/runOptions.js
++++ b/dist/src/cli/runOptions.js
+@@ -99,6 +99,8 @@
+         azure,
+         effectiveModelId,
+         modelOverrides: apiModelOverrides,
++        reasoningMode: fixedEngine === "api" ? userConfig?.reasoningMode : undefined,
++        reasoningEffort: fixedEngine === "api" ? userConfig?.reasoningEffort : undefined,
+     };
+     return { runOptions, resolvedEngine: fixedEngine, engineCoercedToApi };
+ }
