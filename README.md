@@ -17,6 +17,8 @@ The declared build targets are x86_64 Linux, aarch64 Linux and Apple Silicon mac
 
 For API calls, provide `OPENAI_API_KEY` at runtime. Keep it out of Nix expressions and the store. `--engine` can explicitly override the wrapper's API default. Model, reasoning mode and effort remain Oracle CLI options.
 
+Both launchers default `NODE_USE_ENV_PROXY=1`, so Node uses the runtime proxy environment, including `HTTP_PROXY`, `HTTPS_PROXY` and `NO_PROXY`. An explicitly exported `NODE_USE_ENV_PROXY` takes precedence; set it to `0` to disable this behavior. Proxy addresses and credentials are not embedded in the package.
+
 ## Home Manager
 
 Use `github:chinrw/oracle-nix` as a flake input:

@@ -15,6 +15,13 @@ def main(package, version):
         env = {key:value for key,value in os.environ.items() if key in ('PATH','HOME','LANG','TMPDIR')}
         env['ORACLE_HOME_DIR'] = temporary
         binary = str(package / 'bin/oracle')
+        preload = root/'check-proxy.cjs'
+        preload.write_text('if (process.env.NODE_USE_ENV_PROXY !== process.env.EXPECTED_PROXY) throw new Error("Wrong proxy default"); process.exit(0);\n')
+        for name in ('oracle', 'oracle-mcp'):
+            for overrides in ({'EXPECTED_PROXY':'1'}, {'NODE_USE_ENV_PROXY':'0','EXPECTED_PROXY':'0'}):
+                subprocess.run([str(package/'bin'/name)], cwd=root,
+                    env=env|{'NODE_OPTIONS':'--require='+str(preload)}|overrides,
+                    check=True, capture_output=True, text=True, timeout=15)
         def cli(*args):
             return subprocess.run([binary,*args],cwd=root,env=env,check=True,capture_output=True,text=True,timeout=30).stdout
         assert cli('--version').strip() == version

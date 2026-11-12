@@ -50,6 +50,7 @@ buildNpmPackage {
       fi
       makeWrapper ${nodejs_24}/bin/node "$out/bin/$command" \
         --add-flags "$out/lib/oracle/node_modules/@steipete/oracle/dist/bin/$entry.js" \
+        --set-default NODE_USE_ENV_PROXY 1 \
         --set-default ORACLE_ENGINE api ${
           lib.optionalString (apiKeyFile != null) "--run ${lib.escapeShellArg keyLoader}"
         }
